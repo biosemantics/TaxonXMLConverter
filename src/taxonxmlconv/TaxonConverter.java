@@ -361,6 +361,16 @@ public class TaxonConverter {
                     newHabitat.setType(type);
                     newHabitat.setValue(content);
                     this.dest.getDescriptionOrTypeOrSynonym().add(newHabitat);
+                } else if(isExceptionalDescriptions(type)) {
+                    Description newDescription = this.treatmentObjectFactory.createDescription();
+                    newDescription.setType(type);
+                    newDescription.setValue(content);
+                    this.dest.getDescriptionOrTypeOrSynonym().add(newDescription);
+                } else if(isHabit(type)) {
+                    Description newDescription = this.treatmentObjectFactory.createDescription();
+                    newDescription.setType("habit");
+                    newDescription.setValue(content);
+                    this.dest.getDescriptionOrTypeOrSynonym().add(newDescription);
                 } else {
                     Discussion newDiscussion = this.treatmentObjectFactory.createDiscussion();
                     newDiscussion.setType(type);
@@ -410,6 +420,24 @@ public class TaxonConverter {
         } else if(lower.indexOf("distribute") >= 0) {
             return true;
         } else if(lower.indexOf("ecology") >= 0) {
+            return true;
+        }
+        return false;
+    }
+    
+    private boolean isHabit(String type) {
+        String lower = type.toLowerCase();
+        if(lower.indexOf("habit") >= 0) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isExceptionalDescriptions(String type) {
+        String lower = type.toLowerCase();
+        if(lower.indexOf("isolated_species_in_sediments") >= 0) {
+            return true;
+        } else if(lower.indexOf("massive_spicular_skeleton") >= 0) {
             return true;
         }
         return false;
