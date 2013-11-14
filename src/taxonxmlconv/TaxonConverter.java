@@ -49,6 +49,7 @@ public class TaxonConverter {
     public void convert(String bibligraph, String processor_name) throws IOException {
         convMeta(bibligraph, processor_name);
         convNomenclature();
+        convCommonNames();
         convKeywords();
         convSynonyms();
         convScope();
@@ -193,18 +194,18 @@ public class TaxonConverter {
             }
             
             if(common_name != null) {
-                JAXBElement<String> newCommonName = this.treatmentObjectFactory.createOtherInfoOnName(common_name);
-                newTaxonIdentification.getFamilyNameOrFamilyAuthorityOrSubfamilyName().add(newCommonName);
+                // common_name will be moved to treatment
+                //JAXBElement<String> newCommonName = this.treatmentObjectFactory.createOtherInfoOnName(common_name);
+                //newTaxonIdentification.getFamilyNameOrFamilyAuthorityOrSubfamilyName().add(newCommonName);
             }
             
             if(hierarchy != null) {
-                JAXBElement<String> newHierarchy = this.treatmentObjectFactory.createOtherInfoOnName(hierarchy);
+                JAXBElement<String> newHierarchy = this.treatmentObjectFactory.createTaxonHierarchy(hierarchy);
                 newTaxonIdentification.getFamilyNameOrFamilyAuthorityOrSubfamilyName().add(newHierarchy);
             }
             
             if(hierarchy_clean != null) {
-                JAXBElement<String> newHierarchyClean = this.treatmentObjectFactory.createOtherInfoOnName(hierarchy_clean);
-                newTaxonIdentification.getFamilyNameOrFamilyAuthorityOrSubfamilyName().add(newHierarchyClean);
+                // dropped
             }
             
             if(otherinfos != null) {
@@ -215,6 +216,23 @@ public class TaxonConverter {
             }
             
             this.dest.getTaxonIdentification().add(newTaxonIdentification);
+        }
+    }
+    
+    private void convCommonNames() throws IOException {
+        TaxonomyNomenclature nomenclature = this.origin.getNomenclature();
+        if(nomenclature != null) {
+            String commonName = nomenclature.getCommonName();
+            
+            String[] commonNames = commonName.split("[,;]");
+            if(commonNames != null) {
+                for(String commonNameString : commonNames) {
+                    if(!commonNameString.trim().equals("")) {
+                        JAXBElement<String> newOtherName = this.treatmentObjectFactory.createOtherName(commonNameString.trim());
+                        this.dest.getDescriptionOrTypeOrSynonym().add(newOtherName);
+                    }
+                }
+            }
         }
     }
     
