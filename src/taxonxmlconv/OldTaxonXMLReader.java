@@ -42,7 +42,9 @@ public class OldTaxonXMLReader {
             this.saxParser.parse(this.file, this.taxonHandler);
             
             return this.taxonHandler.getTaxonomy();
-        } catch (ParserConfigurationException | SAXException ex) {
+        } catch (ParserConfigurationException ex) {
+            throw new IOException(ex.getMessage());
+        } catch (SAXException ex) {
             throw new IOException(ex.getMessage());
         }
     }
@@ -55,7 +57,9 @@ public class OldTaxonXMLReader {
             this.saxParser.parse(this.file, this.keyHandler);
             
             return this.keyHandler.getKey();
-        } catch (ParserConfigurationException | SAXException ex) {
+        } catch (ParserConfigurationException ex) {
+            throw new IOException(ex.getMessage());
+        } catch (SAXException ex) {
             throw new IOException(ex.getMessage());
         }
     }

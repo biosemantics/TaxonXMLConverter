@@ -8,6 +8,9 @@ import common.utils.StreamUtil;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
@@ -56,6 +59,8 @@ public class TaxonXMLConv {
     
     private void convFile(File in, File out, String bibligraph, String processor_name) throws IOException {
         // check xml file
+        System.out.println("Converting : "+ in.getAbsolutePath());
+        System.out.println("to : "+ out.getAbsolutePath());
         String content;
         try {
             content = StreamUtil.readFileString(in);
@@ -114,9 +119,37 @@ public class TaxonXMLConv {
                 }
             });
             
+            List<String> targetTaxon_list = new ArrayList<String>();
+            List<String> targetKey_list = new ArrayList<String>();
             for(File in : targets) {
-                File out = new File(this.newXML, in.getName());
-                convFile(in, out, this.bibrigraph, this.processor_name);
+                String content;
+                try {
+                    content = StreamUtil.readFileString(in);
+                } catch (Exception ex) {
+                    throw new IOException(ex);
+                }
+                
+                if (isOldTaxonXML(content)) {
+                    targetTaxon_list.add(in.getPath());
+                }
+                if (isOldKeyXML(content)) {
+                    targetKey_list.add(in.getPath());
+                }
+            }
+            
+            Collections.sort(targetTaxon_list, new XmlFilenameComparator());
+            Collections.sort(targetKey_list, new XmlFilenameComparator());
+            
+            for(String in : targetTaxon_list) {
+                File oldFile = new File(in);
+                File out = new File(this.newXML, oldFile.getName());
+                convFile(oldFile, out, this.bibrigraph, this.processor_name);
+            }
+            
+            for(String in : targetKey_list) {
+                File oldFile = new File(in);
+                File out = new File(this.newXML, oldFile.getName());
+                convFile(oldFile, out, this.bibrigraph, this.processor_name);
             }
         }
     }
