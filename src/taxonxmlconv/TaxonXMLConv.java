@@ -33,6 +33,8 @@ public class TaxonXMLConv {
     private xml.newformat.beans.treatment.ObjectFactory taxonObjectFactory;
     private xml.newformat.beans.key.ObjectFactory keyObjectFactory;
     
+    private Hierarchy hierarchy;
+    
     public TaxonXMLConv(File oldXML, File newXML, String bibrigraph, String processor_name) {
         this.oldXML = oldXML;
         this.newXML = newXML;
@@ -41,6 +43,8 @@ public class TaxonXMLConv {
         
         this.taxonObjectFactory = new xml.newformat.beans.treatment.ObjectFactory();
         this.keyObjectFactory = new xml.newformat.beans.key.ObjectFactory();
+        
+        this.hierarchy = new Hierarchy();
     }
     
     private boolean isOldTaxonXML(String xml) {
@@ -81,7 +85,7 @@ public class TaxonXMLConv {
         
         if(isTaxonXML) {
             Taxonomy taxon = reader.parseTaxon();
-            Treatment newTaxon = convTaxon(taxon, bibligraph, processor_name);
+            Treatment newTaxon = convTaxon(this.hierarchy, taxon, bibligraph, processor_name);
             try {
                 createXML(newTaxon, out);
                 System.out.println("new Taxon XML was created : " + out.getName());
@@ -176,15 +180,15 @@ public class TaxonXMLConv {
             ex.printStackTrace();
         }
     }
-
-    private Treatment convTaxon(Taxonomy taxon, String bibligraph, String processor_name) throws IOException {
+    
+    private Treatment convTaxon(Hierarchy hierarchy, Taxonomy taxon, String bibligraph, String processor_name) throws IOException {
         if(taxon == null) {
             return null;
         }
         
         Treatment treatment = this.taxonObjectFactory.createTreatment();
         
-        TaxonConverter tc = new TaxonConverter(treatment, taxon);
+        TaxonConverter tc = new TaxonConverter(hierarchy, treatment, taxon);
         tc.convert(bibligraph, processor_name);
         
         return tc.getTreatment();

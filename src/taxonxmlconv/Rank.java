@@ -36,11 +36,13 @@ public class Rank {
             rankPredefined.add("Tribe");
             rankPredefined.add("Subtribe");
             rankPredefined.add("Genus");
+            rankPredefined.add("Genus_group");
             rankPredefined.add("Subgenus");
             rankPredefined.add("Section");
             rankPredefined.add("Subsection");
             rankPredefined.add("Series");
             rankPredefined.add("Species");
+            rankPredefined.add("Species_group");
             rankPredefined.add("Subspecies");
             rankPredefined.add("Variety");
         }
@@ -62,9 +64,33 @@ public class Rank {
             rankRelationForThreePartNames.add(new RankRelation("Family", "Tribe"));
             rankRelationForThreePartNames.add(new RankRelation("Tribe", "Genus"));
             rankRelationForThreePartNames.add(new RankRelation("Genus", "Subgenus"));
-            rankRelationForThreePartNames.add(new RankRelation("Subgenus", "Species"));
+            rankRelationForThreePartNames.add(new RankRelation("Genus", "Species"));
             rankRelationForThreePartNames.add(new RankRelation("Species", "Subspecies"));
         }
+    }
+    
+    public static int compareRanks(String rank1, String rank2) throws IOException {
+        int order1 = -1;
+        for(int i=0;i<rankPredefined.size();i++) {
+            String rank1_ = rankPredefined.get(i);
+            if(rank1_.equals(findRank(rank1))) {
+                order1 = i;
+            }
+        }
+        
+        int order2 = -1;
+        for(int i=0;i<rankPredefined.size();i++) {
+            String rank2_ = rankPredefined.get(i);
+            if(rank2_.equals(findRank(rank2))) {
+                order2 = i;
+            }
+        }
+        
+        if(order1 == -1 || order2 == -1) {
+            throw new IOException("cannot find orders");
+        }
+        
+        return order1 - order2;
     }
 
     public static String[] getPredefinedRanks() {

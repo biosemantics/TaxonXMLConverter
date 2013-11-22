@@ -38,11 +38,13 @@ import xml.old.beans.TaxonomyTypeSpecies;
  */
 public class TaxonConverter {
 
+    private Hierarchy hierarchy;
     private Treatment dest;
     private Taxonomy origin;
     private xml.newformat.beans.treatment.ObjectFactory treatmentObjectFactory;
 
-    public TaxonConverter(Treatment treatment, Taxonomy taxon) {
+    public TaxonConverter(Hierarchy hierarchy, Treatment treatment, Taxonomy taxon) {
+        this.hierarchy = hierarchy;
         this.dest = treatment;
         this.origin = taxon;
         this.treatmentObjectFactory = new xml.newformat.beans.treatment.ObjectFactory();
@@ -149,13 +151,14 @@ public class TaxonConverter {
             
             System.out.println("authority : " + authority);
             
-            String newHierarchy = "";
-            for(int i=0;i<name_parts.length;i++) {
-                if(!newHierarchy.equals("")) {
-                    newHierarchy += "; ";
-                }
-                newHierarchy += rank_parts[i] + " " + name_parts[i];
-            }
+            // check to hierarchy
+            HierarchyEntry fullHierarchy = this.hierarchy.getFullHierarchy(name_parts, rank_parts);
+            
+            // generate hierarchy
+            String newHierarchy = fullHierarchy.toString();
+
+            name_parts = fullHierarchy.getNames();
+            rank_parts = fullHierarchy.getRanks();
             
             System.out.println("hierarchy : " + newHierarchy);
 
@@ -174,6 +177,8 @@ public class TaxonConverter {
                         newName = this.treatmentObjectFactory.createSubtribeName(name_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("genus")) {
                         newName = this.treatmentObjectFactory.createGenusName(name_parts[i]);
+                    } else if (rank_parts[i].toLowerCase().equals("genus_group")) {
+                        newName = this.treatmentObjectFactory.createGenusGroupName(name_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("subgenus")) {
                         newName = this.treatmentObjectFactory.createSubgenusName(name_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("section")) {
@@ -184,6 +189,8 @@ public class TaxonConverter {
                         newName = this.treatmentObjectFactory.createSeriesName(name_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("species")) {
                         newName = this.treatmentObjectFactory.createSpeciesName(name_parts[i]);
+                    } else if (rank_parts[i].toLowerCase().equals("species_group")) {
+                        newName = this.treatmentObjectFactory.createSpeciesGroupName(name_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("subspecies")) {
                         newName = this.treatmentObjectFactory.createSubspeciesName(name_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("variety")) {
@@ -197,7 +204,7 @@ public class TaxonConverter {
             }
             
             if (authority != null) {
-                JAXBElement<String> newAuthority;
+                JAXBElement<String> newAuthority = null;
                 if (rank.toLowerCase().equals("family")) {
                     newAuthority = this.treatmentObjectFactory.createFamilyAuthority(authority);
                 } else if (rank.toLowerCase().equals("subfamily")) {
@@ -208,6 +215,8 @@ public class TaxonConverter {
                     newAuthority = this.treatmentObjectFactory.createSubtribeAuthority(authority);
                 } else if (rank.toLowerCase().equals("genus")) {
                     newAuthority = this.treatmentObjectFactory.createGenusAuthority(authority);
+                } else if (rank.toLowerCase().equals("genus_group")) {
+                    // pass
                 } else if (rank.toLowerCase().equals("subgenus")) {
                     newAuthority = this.treatmentObjectFactory.createSubgenusAuthority(authority);
                 } else if (rank.toLowerCase().equals("section")) {
@@ -218,6 +227,8 @@ public class TaxonConverter {
                     newAuthority = this.treatmentObjectFactory.createSeriesAuthority(authority);
                 } else if (rank.toLowerCase().equals("species")) {
                     newAuthority = this.treatmentObjectFactory.createSpeciesAuthority(authority);
+                } else if (rank.toLowerCase().equals("species_group")) {
+                    // pass
                 } else if (rank.toLowerCase().equals("subspecies")) {
                     newAuthority = this.treatmentObjectFactory.createSubspeciesAuthority(authority);
                 } else if (rank.toLowerCase().equals("variety")) {
@@ -226,7 +237,9 @@ public class TaxonConverter {
                     throw new IOException("Unknown rank");
                 }
 
-                newTaxonIdentification.getFamilyNameOrFamilyAuthorityOrSubfamilyName().add(newAuthority);
+                if(newAuthority != null) {
+                    newTaxonIdentification.getFamilyNameOrFamilyAuthorityOrSubfamilyName().add(newAuthority);
+                }
             }
 
             if (name_info != null) {
@@ -252,6 +265,9 @@ public class TaxonConverter {
             }
 
             this.dest.getTaxonIdentification().add(newTaxonIdentification);
+            
+            // add to hierarchy
+            this.hierarchy.addEntry(fullHierarchy);
         }
     }
 
