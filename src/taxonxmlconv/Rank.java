@@ -55,6 +55,7 @@ public class Rank {
             rankRelationForTwoPartNames.add(new RankRelation("Tribe", "Genus"));
             rankRelationForTwoPartNames.add(new RankRelation("Genus", "Species"));
             rankRelationForTwoPartNames.add(new RankRelation("Genus", "Subgenus"));
+            rankRelationForTwoPartNames.add(new RankRelation("Species", "Subspecies"));
         }
         
         if(rankRelationForThreePartNames.isEmpty()) {
@@ -66,6 +67,7 @@ public class Rank {
             rankRelationForThreePartNames.add(new RankRelation("Genus", "Subgenus"));
             rankRelationForThreePartNames.add(new RankRelation("Genus", "Species"));
             rankRelationForThreePartNames.add(new RankRelation("Species", "Subspecies"));
+            rankRelationForThreePartNames.add(new RankRelation("Species", "Variety"));
         }
     }
     
@@ -100,6 +102,15 @@ public class Rank {
         return arr;
     }
     
+    public static boolean checkRank(String rank) {
+        for (String rankDefined : rankPredefined) {
+            if (rankDefined.trim().equalsIgnoreCase(rank.trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
     public static String findRank(String rank) throws IOException {
         for (String rankDefined : rankPredefined) {
             if (rankDefined.trim().equalsIgnoreCase(rank.trim())) {
@@ -108,7 +119,7 @@ public class Rank {
         }
 
         // default
-        throw new IOException("cannot find rank info");
+        throw new IOException("cannot find rank info : " + rank);
     }
     
     public static String findChildRank(String rank, int nameParts) throws IOException {
@@ -124,9 +135,11 @@ public class Rank {
                     return rr.getChildRank();
                 }
             }
+        } else {
+            throw new IOException("cannot find rank info : " + rank + ", " + nameParts);
         }
         
-        throw new IOException("cannot find rank info");
+        throw new IOException("cannot find rank info : " + rank);
     }
     
     public static String findParentRank(String rank, int nameParts) throws IOException {
@@ -142,9 +155,11 @@ public class Rank {
                     return rr.getParentRank();
                 }
             }
+        } else {
+            throw new IOException("cannot find rank info : " + rank + ", " + nameParts);
         }
         
-        throw new IOException("cannot find rank info");
+        throw new IOException("cannot find rank info : " + rank);
     }
 }
 

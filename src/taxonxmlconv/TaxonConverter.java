@@ -5,6 +5,7 @@
 package taxonxmlconv;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import javax.xml.bind.JAXBElement;
 import xml.newformat.beans.treatment.Description;
@@ -96,69 +97,33 @@ public class TaxonConverter {
             String name = nomenclature.getName();
             String authority = nomenclature.getAuthority();
             String common_name = nomenclature.getCommonName();
-            String hierarchy = nomenclature.getHierarchy();
-            String hierarchy_clean = nomenclature.getHierarchyClean();
+            //String hierarchy = nomenclature.getHierarchy();
+            //String hierarchy_clean = nomenclature.getHierarchyClean();
             List<TaxonomyOtherInfo> otherinfos = nomenclature.getOtherInfos();
             
-            if(name.split("\\s").length < 3) {
-                // pass
-                // all parts are name
-            } else {
-                if (authority == null) {
-                    authority = getAuthority(name);
-                    name = getPureName(name);
-                }
+            if (authority != null) {
+                name = name.trim() + " " + authority.trim();
             }
             
-            String[] name_parts = name.split("\\s");
-            if(name_parts.length == 1) {
-                // pass
-            } else if(name_parts.length == 2) {
-                // pass
-            } else if(name_parts.length == 3) {
-                if(name_parts[1].charAt(0) == '(' && name_parts[1].charAt(name_parts[1].length()-1) == ')') {
-                    // pass
-                    name_parts[1] = name_parts[1].substring(1, name_parts[1].length()-1);
-                } else {
-                    System.err.println("Warning! - # of name_parts are 3");
-                    // pass
-                }
-            } else {
-                throw new IOException("Name parsing error : len is not 2,3");
-            }
+            name = removeFirstRank(name);
+                
+            System.out.println("name : " + name);
             
-            String[] rank_parts = new String[name_parts.length];
-            rank_parts[rank_parts.length - 1] = Rank.findRank(rank);
-            for(int i=0;i<rank_parts.length;i++) {
-                int me = rank_parts.length - 1 - i;
-                String myrank = rank_parts[me];
-                int prev = me -1;
-                if(prev >=0) {
-                    rank_parts[prev] = Rank.findParentRank(myrank, name_parts.length);
-                }
-            }
+            HierarchyEntry hierarchy = getHierarchy(name, Rank.findRank(rank));
             
-            for(int i=0;i<name_parts.length;i++) {
-                System.out.println("name[" + i + "] : " + name_parts[i] + " - " + rank_parts[i]);
+            for(int i=0;i<hierarchy.getNames().length;i++) {
+                System.out.println("name[" + i + "] : " + hierarchy.getNames()[i] + " - " + hierarchy.getRanks()[i] + " - " + hierarchy.getAuthorities()[i]);
             }
-            
-            if(authority != null) {
-                if (authority.charAt(0) == '(' && authority.charAt(authority.length() - 1) == ')') {
-                    // pass
-                    authority = authority.substring(1, authority.length() - 1);
-                }
-            }
-            
-            System.out.println("authority : " + authority);
             
             // check to hierarchy
-            HierarchyEntry fullHierarchy = this.hierarchy.getFullHierarchy(name_parts, rank_parts);
+            HierarchyEntry completeHierarchy = this.hierarchy.getCompleteHierarchyNCA(hierarchy);
             
             // generate hierarchy
-            String newHierarchy = fullHierarchy.toString();
+            String newHierarchy = completeHierarchy.getHierarchyString();
 
-            name_parts = fullHierarchy.getNames();
-            rank_parts = fullHierarchy.getRanks();
+            String[] name_parts = completeHierarchy.getNames();
+            String[] rank_parts = completeHierarchy.getRanks();
+            String[] authority_parts = completeHierarchy.getAuthorities();
             
             System.out.println("hierarchy : " + newHierarchy);
 
@@ -166,85 +131,72 @@ public class TaxonConverter {
 
             for(int i=0;i<name_parts.length;i++) {
                 if (name_parts[i] != null) {
-                    JAXBElement<String> newName;
-                    if (rank_parts[i].toLowerCase().equals("family")) {
+                    JAXBElement<String> newName = null;
+                    JAXBElement<String> newAuthority = null;
+                    if (rank_parts[i].toLowerCase().equals("order")) {
+                        newName = this.treatmentObjectFactory.createOrderName(name_parts[i]);
+                        newAuthority = this.treatmentObjectFactory.createOrderAuthority(authority_parts[i]);
+                    } else if (rank_parts[i].toLowerCase().equals("suborder")) {
+                        newName = this.treatmentObjectFactory.createSuborderName(name_parts[i]);
+                        newAuthority = this.treatmentObjectFactory.createSuborderAuthority(authority_parts[i]);
+                    } else if (rank_parts[i].toLowerCase().equals("superfamily")) {
+                        newName = this.treatmentObjectFactory.createSuperfamilyName(name_parts[i]);
+                        newAuthority = this.treatmentObjectFactory.createSuperfamilyAuthority(authority_parts[i]);
+                    } else if (rank_parts[i].toLowerCase().equals("family")) {
                         newName = this.treatmentObjectFactory.createFamilyName(name_parts[i]);
+                        newAuthority = this.treatmentObjectFactory.createFamilyAuthority(authority_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("subfamily")) {
                         newName = this.treatmentObjectFactory.createSubfamilyName(name_parts[i]);
+                        newAuthority = this.treatmentObjectFactory.createSubfamilyAuthority(authority_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("tribe")) {
                         newName = this.treatmentObjectFactory.createTribeName(name_parts[i]);
+                        newAuthority = this.treatmentObjectFactory.createTribeAuthority(authority_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("subtribe")) {
                         newName = this.treatmentObjectFactory.createSubtribeName(name_parts[i]);
+                        newAuthority = this.treatmentObjectFactory.createSubtribeAuthority(authority_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("genus")) {
                         newName = this.treatmentObjectFactory.createGenusName(name_parts[i]);
+                        newAuthority = this.treatmentObjectFactory.createGenusAuthority(authority_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("genus_group")) {
                         newName = this.treatmentObjectFactory.createGenusGroupName(name_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("subgenus")) {
                         newName = this.treatmentObjectFactory.createSubgenusName(name_parts[i]);
+                        newAuthority = this.treatmentObjectFactory.createSubgenusAuthority(authority_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("section")) {
                         newName = this.treatmentObjectFactory.createSectionName(name_parts[i]);
+                        newAuthority = this.treatmentObjectFactory.createSectionAuthority(authority_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("subsection")) {
                         newName = this.treatmentObjectFactory.createSubsectionName(name_parts[i]);
+                        newAuthority = this.treatmentObjectFactory.createSubsectionAuthority(authority_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("series")) {
                         newName = this.treatmentObjectFactory.createSeriesName(name_parts[i]);
+                        newAuthority = this.treatmentObjectFactory.createSeriesAuthority(authority_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("species")) {
                         newName = this.treatmentObjectFactory.createSpeciesName(name_parts[i]);
+                        newAuthority = this.treatmentObjectFactory.createSpeciesAuthority(authority_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("species_group")) {
                         newName = this.treatmentObjectFactory.createSpeciesGroupName(name_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("subspecies")) {
                         newName = this.treatmentObjectFactory.createSubspeciesName(name_parts[i]);
+                        newAuthority = this.treatmentObjectFactory.createSubspeciesAuthority(authority_parts[i]);
                     } else if (rank_parts[i].toLowerCase().equals("variety")) {
                         newName = this.treatmentObjectFactory.createVarietyName(name_parts[i]);
+                        newAuthority = this.treatmentObjectFactory.createVarietyAuthority(authority_parts[i]);
                     } else {
                         throw new IOException("Unknown rank");
                     }
 
-                    newTaxonIdentification.getFamilyNameOrFamilyAuthorityOrSubfamilyName().add(newName);
+                    newTaxonIdentification.getOrderNameOrOrderAuthorityOrSuborderName().add(newName);
+                    
+                    if (newAuthority != null && newAuthority.getValue() != null) {
+                        newTaxonIdentification.getOrderNameOrOrderAuthorityOrSuborderName().add(newAuthority);
+                    }
                 }    
             }
             
-            if (authority != null) {
-                JAXBElement<String> newAuthority = null;
-                if (rank.toLowerCase().equals("family")) {
-                    newAuthority = this.treatmentObjectFactory.createFamilyAuthority(authority);
-                } else if (rank.toLowerCase().equals("subfamily")) {
-                    newAuthority = this.treatmentObjectFactory.createSubfamilyAuthority(authority);
-                } else if (rank.toLowerCase().equals("tribe")) {
-                    newAuthority = this.treatmentObjectFactory.createTribeAuthority(authority);
-                } else if (rank.toLowerCase().equals("subtribe")) {
-                    newAuthority = this.treatmentObjectFactory.createSubtribeAuthority(authority);
-                } else if (rank.toLowerCase().equals("genus")) {
-                    newAuthority = this.treatmentObjectFactory.createGenusAuthority(authority);
-                } else if (rank.toLowerCase().equals("genus_group")) {
-                    // pass
-                } else if (rank.toLowerCase().equals("subgenus")) {
-                    newAuthority = this.treatmentObjectFactory.createSubgenusAuthority(authority);
-                } else if (rank.toLowerCase().equals("section")) {
-                    newAuthority = this.treatmentObjectFactory.createSectionAuthority(authority);
-                } else if (rank.toLowerCase().equals("subsection")) {
-                    newAuthority = this.treatmentObjectFactory.createSubsectionAuthority(authority);
-                } else if (rank.toLowerCase().equals("series")) {
-                    newAuthority = this.treatmentObjectFactory.createSeriesAuthority(authority);
-                } else if (rank.toLowerCase().equals("species")) {
-                    newAuthority = this.treatmentObjectFactory.createSpeciesAuthority(authority);
-                } else if (rank.toLowerCase().equals("species_group")) {
-                    // pass
-                } else if (rank.toLowerCase().equals("subspecies")) {
-                    newAuthority = this.treatmentObjectFactory.createSubspeciesAuthority(authority);
-                } else if (rank.toLowerCase().equals("variety")) {
-                    newAuthority = this.treatmentObjectFactory.createVarietyAuthority(authority);
-                } else {
-                    throw new IOException("Unknown rank");
-                }
-
-                if(newAuthority != null) {
-                    newTaxonIdentification.getFamilyNameOrFamilyAuthorityOrSubfamilyName().add(newAuthority);
-                }
-            }
-
             if (name_info != null) {
                 JAXBElement<String> newNameInfo = this.treatmentObjectFactory.createOtherInfoOnName(name_info);
-                newTaxonIdentification.getFamilyNameOrFamilyAuthorityOrSubfamilyName().add(newNameInfo);
+                newTaxonIdentification.getOrderNameOrOrderAuthorityOrSuborderName().add(newNameInfo);
             }
 
             if (common_name != null) {
@@ -260,14 +212,14 @@ public class TaxonConverter {
             if (otherinfos != null) {
                 for (TaxonomyOtherInfo otherinfo : otherinfos) {
                     JAXBElement<String> newOtherInfo = this.treatmentObjectFactory.createOtherInfoOnName(otherinfo.getOtherInfo());
-                    newTaxonIdentification.getFamilyNameOrFamilyAuthorityOrSubfamilyName().add(newOtherInfo);
+                    newTaxonIdentification.getOrderNameOrOrderAuthorityOrSuborderName().add(newOtherInfo);
                 }
             }
 
             this.dest.getTaxonIdentification().add(newTaxonIdentification);
             
             // add to hierarchy
-            this.hierarchy.addEntry(fullHierarchy);
+            this.hierarchy.addEntry(completeHierarchy);
         }
     }
 
@@ -530,54 +482,110 @@ public class TaxonConverter {
     }
     
     private String getPureName(String name) {
-        String authority = getAuthority(name);
-        
-        int idx = name.indexOf(authority);
-        if(idx >= 0) {
-            return name.substring(0, idx).trim();
+        String new_name = "";
+        String[] names = name.split("\\s");
+        for(int i=0;i<names.length;i++) {
+            new_name += names[i].trim() + " ";
         }
         
-        System.out.println("No purename found - " + name);
+        new_name = new_name.trim();
+        String authority = getAuthority(new_name);
+        
+        if(authority == null) {
+            return name;
+        }
+        
+        int idx = new_name.lastIndexOf(authority);
+        if(idx >= 0) {
+            return new_name.substring(0, idx).trim();
+        }
+        
+        System.out.println("No purename found - " + new_name);
         return null;
     }
     
-    private String getAuthority(String name) {
-        String name2 = name;
-        if(name2.endsWith(", sp. nov.")) {
-            int lastIdx = name2.indexOf(", sp. nov.");
-            if(lastIdx >= 0) {
-                name2 = name2.substring(0, lastIdx);
-            }
+    private boolean isPossibleAuthority(String name) {
+        if(name.charAt(0) == '(' || name.charAt(name.length() - 1) == ')') {
+            return true;
         }
         
-        int startPos = name2.length()-1;
-        
-        int commaIdx = name2.indexOf(",");
-        if(commaIdx >= 0) {
-            startPos = Math.min(startPos, commaIdx - 1);
-        }
-        
-        int etIdx = name2.indexOf(" et ");
-        if(etIdx >= 0) {
-            startPos = Math.min(startPos, etIdx - 1);
-        }
-        
-        int spacePos = 0;
-        for(int i=startPos;i>=0;i--) {
-            if(name2.charAt(i) == ' ') {
-                if(i >= 1 && name2.charAt(i - 1) != '.') {
-                    spacePos = i;
-                    break;
+        if(name.charAt(0) >= 'A' && name.charAt(0) <= 'Z') {
+            // check others
+            boolean others = false;
+            for(int i=1;i<name.length();i++) {
+                if(name.charAt(i) >= 'A' && name.charAt(i) <= 'Z') {
+                    others = true;
                 }
             }
+            if(!others) {
+                return true;
+            }
         }
-
-        String authority = name2.substring(spacePos + 1).trim();
-        if((authority.charAt(0) >= 'A' && authority.charAt(0) <= 'Z')
-                || authority.charAt(0) == '(') {
-            return authority;
+        
+        //if(name.charAt(0) >= 'A' && name.charAt(0) <= 'Z') {
+            // check others
+            if(name.charAt(name.length() - 1) == '.') {
+                return true;
+            }
+        //}
+        
+        if(name.equalsIgnoreCase("nov.")) {
+            return true;
+        }
+        
+        if(name.equalsIgnoreCase("sp.")) {
+            return true;
+        }
+        
+        if(name.equalsIgnoreCase("in")) {
+            return true;
+        }
+        
+        if(name.equalsIgnoreCase("ex")) {
+            return true;
+        }
+        
+        if(name.endsWith(",")) {
+            return true;
+        }
+        
+        if(name.equalsIgnoreCase("et")) {
+            return true;
+        }
+        
+        if(name.equalsIgnoreCase("&")) {
+            return true;
+        }
+        
+        if(name.equalsIgnoreCase("de")) {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    private String getAuthority(String name) {
+        
+        String buffer = "";
+        boolean foundAuthority = false;
+        String[] names = name.trim().split("\\s");
+        for(int i=0;i<names.length;i++) {
+            int me = names.length - 1 - i;
+            if(me == 0) {
+                break;
+            }
+            if(isPossibleAuthority(names[me].trim())) {
+                buffer = names[me] + " " + buffer;
+                foundAuthority = true;
+            } else {
+                break;
+            }
+        }
+        
+        if(foundAuthority) {
+            return buffer.trim();
         } else {
-            System.out.println("No authority found - " + name2);
+            System.out.println("No authority found - " + name);
             return null;
         }
     }
@@ -592,5 +600,121 @@ public class TaxonConverter {
             newTitle = newTitle.substring(0, newTitle.length()-1);
         }
         return newTitle;
+    }
+
+    private String removeFirstRank(String name) {
+        String[] name_parts = name.split("\\s");
+        boolean hasRank = false;
+        if(name_parts.length > 1) {
+            if(Rank.checkRank(name_parts[0])) {
+                hasRank = true;
+            }
+            
+            if(hasRank) {
+                String newName = "";
+                for(int i=1;i<name_parts.length;i++) {
+                    if(!newName.equals("")) {
+                        newName += " ";
+                    }
+                    newName += name_parts[i];
+                }
+                return newName;
+            }
+            return name;
+            
+        } else {
+            return name;
+        }
+    }
+
+    private HierarchyEntry getHierarchy(String name, String rank) throws IOException {
+        List<String> new_name_parts = new ArrayList<String>();
+        List<String> new_rank_parts = new ArrayList<String>();
+        List<String> new_auth_parts = new ArrayList<String>();
+        
+        String firstPart = null;
+        boolean hasSecondPart = false;
+        if(name.indexOf(" ssp. ") >= 0 || name.indexOf(" var. ") >= 0) {
+            // split into two
+            int idx = 0;
+            int len = 0;
+            String rnk = null;
+            if(name.indexOf(" ssp. ") >= 0) {
+                idx = name.indexOf(" ssp. ");
+                len = 6;
+                rnk = "Subspecies";
+            } else if(name.indexOf(" var. ") >= 0) {
+                idx = name.indexOf(" var. ");
+                len = 6;
+                rnk = "Variety";
+            }
+            
+            firstPart = name.substring(0, idx).trim();
+            String secondPart = name.substring(idx + 6).trim();
+            
+            String secondAuth = getAuthority(secondPart);
+            String secondName = getPureName(secondPart);
+            System.out.println("secondName : " + secondName);
+            if(secondName.split("\\s").length > 1) {
+                throw new IOException("second part has more than 2 parts : " + secondName);
+            }
+            
+            new_name_parts.add(0, secondName);
+            new_rank_parts.add(0, rnk);
+            new_auth_parts.add(0, secondAuth);
+            hasSecondPart = true;
+        } else {
+            firstPart = name;
+        }
+        
+        String firstAuth = getAuthority(firstPart);
+        String firstName = getPureName(firstPart);
+        
+        String[] name_parts = firstName.split("\\s");
+        for(int i=name_parts.length-1;i>=0;i--) {
+            String pure_name = removeBrace(name_parts[i]);
+            new_name_parts.add(0, pure_name);
+            if(i == name_parts.length-1) {
+                new_auth_parts.add(0, firstAuth);
+            } else {
+                new_auth_parts.add(0, null);
+            }
+        }
+        
+        String prevRank = rank;
+        for(int i=0;i<name_parts.length;i++) {
+            int me = name_parts.length - 1 - i;
+            if(hasSecondPart) {
+                String newRank = Rank.findParentRank(prevRank, name_parts.length + 1);
+                new_rank_parts.add(0, newRank);
+                prevRank = newRank;
+            } else {
+                if(me == name_parts.length - 1) {
+                    new_rank_parts.add(0, prevRank);
+                } else {
+                    String newRank = Rank.findParentRank(prevRank, name_parts.length);
+                    new_rank_parts.add(0, newRank);
+                    prevRank = newRank;
+                }
+            }
+        }
+        
+        String[] entryNames = new String[new_name_parts.size()];
+        String[] entryRanks = new String[new_rank_parts.size()];
+        String[] entryAuths = new String[new_auth_parts.size()];
+        
+        entryNames = new_name_parts.toArray(entryNames);
+        entryRanks = new_rank_parts.toArray(entryRanks);
+        entryAuths = new_auth_parts.toArray(entryAuths);
+        
+        HierarchyEntry entry = new HierarchyEntry(entryNames, entryRanks, entryAuths);
+        return entry;
+    }
+    
+    private String removeBrace(String name) {
+        if(name.startsWith("(") && name.endsWith(")")) {
+            return name.substring(1, name.length() - 1);
+        }
+        return name;
     }
 }
